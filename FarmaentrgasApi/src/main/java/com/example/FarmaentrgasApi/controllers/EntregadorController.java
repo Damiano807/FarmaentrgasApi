@@ -1,10 +1,10 @@
 package com.example.FarmaentrgasApi.controllers;
 
-
 import com.example.FarmaentrgasApi.controllers.dtos.LoginEntregadorRequest;
 import com.example.FarmaentrgasApi.infrastucture.models.Entregador;
 import com.example.FarmaentrgasApi.infrastucture.models.Pedido;
 import com.example.FarmaentrgasApi.services.EntregadorService;
+import com.example.FarmaentrgasApi.services.GrafoRotaService;
 import com.example.FarmaentrgasApi.services.PedidoService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import java.util.Map;
 public class EntregadorController {
 
     private final EntregadorService entregadorService;
-    private final PedidoService pedidoService;
+    private final PedidoService     pedidoService;
 
     // POST /entregador — cadastro do entregador
     @PostMapping
@@ -84,5 +84,27 @@ public class EntregadorController {
             @RequestParam(defaultValue = "10.0") Double raio) {
         return ResponseEntity.ok(
                 entregadorService.buscarDisponiveisProximos(lat, lng, raio));
+    }
+
+    /**
+     * GET /entregador/{id}/rota-otimizada
+     *
+     * Devolve os pedidos activos do entregador ordenados pela melhor sequência
+     * de entrega, calculada com o algoritmo do Vizinho Mais Próximo (grafo).
+     *
+     * Exemplo de resposta:
+     * {
+     *   "pedidosOrdenados": [ { pedido1 }, { pedido2 }, ... ],
+     *   "distanciaTotalKm": 7.4,
+     *   "tempoEstimadoMin": 15,
+     *   "grafoArestas": [
+     *     { "origem": "Entregador", "destino": "Pedido #3", "distanciaKm": 2.1 },
+     *     { "origem": "Pedido #3",  "destino": "Pedido #1", "distanciaKm": 5.3 }
+     *   ]
+     * }
+     */
+    @GetMapping("/{id}/rota-otimizada")
+    public ResponseEntity<GrafoRotaService.ResultadoRota> rotaOtimizada(@PathVariable Long id) {
+        return ResponseEntity.ok(pedidoService.calcularRotaEntregador(id));
     }
 }

@@ -1,8 +1,9 @@
 package com.example.FarmaentrgasApi.services;
 
+import com.example.FarmaentrgasApi.infrastucture.models.PontoMapa;
 import com.example.FarmaentrgasApi.infrastucture.models.Usuario;
 import com.example.FarmaentrgasApi.infrastucture.Repository.*;
-import  com.example.FarmaentrgasApi.infrastucture.models.*;
+import com.example.FarmaentrgasApi.infrastucture.models.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import java.util.Optional;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final LocalizacaoAleatoriaService localizacaoAleatoriaService;
 
     @Transactional(readOnly = true)
     public List<Usuario> listarTodos() {
@@ -41,45 +43,45 @@ public class UsuarioService {
         return usuarioRepository.save(usuario);
     }
 
-  /*  @Transactional
-    public Usuario atualizar(Long id, Usuario dadosAtualizados) {
-        Usuario usuario = buscarPorId(id);
-        usuario.setName(dadosAtualizados.getName());
-        usuario.setEmail(dadosAtualizados.getEmail());
-        usuario.setTelefone(dadosAtualizados.getTelefone());
-        usuario.setTipo(dadosAtualizados.getTipo());
-        return usuarioRepository.save(usuario);
-    }
-
+    /**
+     * Realiza o login do utilizador.
+     * Ao fazer login com sucesso, gera automaticamente uma localização
+     * aleatória dentro de Luanda e associa ao perfil do utilizador.
+     * Este ponto simula a posição GPS do utilizador enquanto estiver logado.
+     */
     @Transactional
-    public void deletar(Long id) {
-        buscarPorId(id);
-        usuarioRepository.deleteById(id);
-    }
-
-    @Transactional
-    public void adicionarSaldo(Long id, Double valor) {
-        Usuario usuario = buscarPorId(id);
-        if (valor <= 0) throw new RuntimeException("Valor deve ser positivo.");
-        usuario.setCarteira(usuario.getCarteira() + valor);
-        usuarioRepository.save(usuario);
-    }
-
-    @Transactional
-    public void debitarSaldo(Long id, Double valor) {
-        Usuario usuario = buscarPorId(id);
-        if (usuario.getCarteira() < valor) {
-            throw new RuntimeException("Saldo insuficiente.");
-        }
-        usuario.setCarteira(usuario.getCarteira() - valor);
-        usuarioRepository.save(usuario);
-    }
-
-   */
-
     public Optional<Usuario> login(String email, String senha) {
-        return usuarioRepository
-                .findByEmail(email)                        // query method do Spring Data
-                .filter(u -> u.getSenha().equals(senha));  // compara senha (texto simples por agora)
+        Optional<Usuario> usuarioOpt = usuarioRepository
+                .findByEmail(email)
+                .filter(u -> u.getSenha().equals(senha));
+
+        // Se login bem-sucedido → atribui localização aleatória
+        usuarioOpt.ifPresent(usuario -> {
+            PontoMapa pontoAleatorio = localizacaoAleatoriaService.gerarPontoAleatorio();
+            usuario.setPontoNoMapa(pontoAleatorio);
+            usuarioRepository.save(usuario);
+        });
+
+        return usuarioOpt;
+    }
+
+    /**
+     * Actualiza a localização do utilizador manualmente (ex.: quando o GPS
+     * do dispositivo devolve uma posição mais precisa).
+     */
+    @Transactional
+    public Usuario atualizarLocalizacao(Long id, Double latitude, Double longitude, String enderecoFormatado) {
+        Usuario usuario = buscarPorId(id);
+        PontoMapa ponto = usuario.getPontoNoMapa();
+        if (ponto == null) {
+            ponto = new PontoMapa();
+        }
+        ponto.setLatitude(latitude);
+        ponto.setLongitude(longitude);
+        if (enderecoFormatado != null) {
+            ponto.setEnderecoFormatado(enderecoFormatado);
+        }
+        usuario.setPontoNoMapa(ponto);
+        return usuarioRepository.save(usuario);
     }
 }
