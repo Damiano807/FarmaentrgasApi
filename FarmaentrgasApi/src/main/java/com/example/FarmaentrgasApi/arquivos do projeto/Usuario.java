@@ -10,11 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "entregador")
+@Table(name = "usuario")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class Entregador {
+public class Usuario {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,44 +24,38 @@ public class Entregador {
     @Column(name = "nome", length = 100, nullable = false)
     private String nome;
 
-    @Email
+    @Email(message = "E-mail inválido")
     @NotBlank(message = "E-mail é obrigatório")
     @Column(name = "email", length = 150, nullable = false, unique = true)
     private String email;
 
-
+    @NotBlank(message = "Senha é obrigatória")
     @Column(name = "senha", length = 100, nullable = false)
+     // Nunca retorna a senha para o app
     private String senha;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo", nullable = false)
+    @Builder.Default
+    private Perfil tipo = Perfil.CLIENTE;
 
     @Column(name = "telefone", length = 15)
     private String telefone;
 
-    // Foto de perfil
-    @Column(name = "foto_url", length = 500)
-    private String fotoUrl;
-
-    // Avaliação média recebida pelos clientes
-    @Column(name = "avaliacao")
-    @Builder.Default
-    private Double avaliacao = 0.0;
-
-    @Column(name = "total_avaliacoes")
-    @Builder.Default
-    private Integer totalAvaliacoes = 0;
-
-    // Se está online e disponível para receber pedidos
-    @Column(name = "disponivel")
-    @Builder.Default
-    private Boolean disponivel = false;
-
-    // Localização atual do entregador (atualizada a cada 5 segundos pelo app)
+    // Localização atual do usuário (atualizada em tempo real quando ele abre o app)
     @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "ponto_no_mapa_id")
-    private PontoMapa localizacaoAtual;
+    private PontoMapa pontoNoMapa;
 
-    // Pedidos atribuídos a este entregador
+    // Farmácias que o usuário é cliente
     @JsonIgnore
-    @OneToMany(mappedBy = "entregador", cascade = CascadeType.ALL)
+    @ManyToMany(mappedBy = "clientes")
+    @Builder.Default
+    private List<Farmacia> farmacias = new ArrayList<>();
+
+    // Pedidos feitos por este usuário
+    @JsonIgnore
+    @OneToMany(mappedBy = "cliente", cascade = CascadeType.ALL)
     @Builder.Default
     private List<Pedido> pedidos = new ArrayList<>();
 }
